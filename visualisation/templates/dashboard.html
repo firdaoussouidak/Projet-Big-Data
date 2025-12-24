@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard IoT - Monitoring en Temps Réel</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary-color: #64748b;
+            --accent-color: #0ea5e9;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: #ffffff;
+            --light-bg: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.07);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 30px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            transform: translate(30%, -30%);
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            transform: translate(-30%, 30%);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .update-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 16px;
+            border-radius: 50px;
+        }
+
+        /* KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-color);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .kpi-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .kpi-detail {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .trend-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .trend-up {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .trend-down {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        /* Nouvelle grille pour l'organisation modifiée */
+        .dashboard-main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-secondary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-main-grid,
+            .dashboard-secondary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-card-small {
+            height: 530px; 
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--light-bg);
+            color: var(--text-secondary);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Alerts - Hauteur augmentée */
+        .alerts-container {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            height: 580px; /* Hauteur augmentée */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .alerts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .alerts-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .alert-badge {
+            background-color: var(--danger-color);
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .alerts-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .alert-item {
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+            border-left: 4px solid var(--danger-color);
+            background: rgba(239, 68, 68, 0.05);
+            transition: all 0.2s;
+        }
+
+        .alert-item:hover {
+            transform: translateX(4px);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-item.medium {
+            border-left-color: var(--warning-color);
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .alert-item.medium:hover {
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-item.low {
+            border-left-color: var(--accent-color);
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .alert-item.low:hover {
+            background: rgba(14, 165, 233, 0.08);
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .alert-sensor {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .alert-time {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .alert-message {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        thead {
+            background-color: var(--light-bg);
+        }
+
+        th {
+            padding: 16px;
+            text-align: left;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        tbody tr {
+            transition: all 0.2s;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(37, 99, 235, 0.03);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background-color: var(--success-color);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+        .status-warning {
+            background-color: var(--warning-color);
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+        }
+
+        .status-error {
+            background-color: var(--danger-color);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        .battery-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+
+        .battery-low {
+            color: var(--danger-color);
+        }
+
+        .battery-medium {
+            color: var(--warning-color);
+        }
+
+        .battery-high {
+            color: var(--success-color);
+        }
+
+        /* Footer */
+        .dashboard-footer {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1;
+                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+            }
+            50% { 
+                opacity: 0.7;
+                box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.4);
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--light-bg);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-satellite-dish"></i> Dashboard IoT - Monitoring en Temps Réel</h1>
+            <p class="subtitle">Surveillance des capteurs IoT - Projet Big Data</p>
+            <div class="header-info">
+                <div class="update-indicator">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Mise à jour automatique toutes les 10 secondes</span>
+                </div>
+                <div class="update-indicator">
+                    <i class="fas fa-clock"></i>
+                    <span>Dernière mise à jour: <span id="last-update">--:--:--</span></span>
+                </div>
+            </div>
+        </header>
+
+        <div class="kpi-grid" id="kpi-grid">
+        </div>
+
+        <div class="dashboard-main-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">Évolution Horaire des Mesures</h3>
+                    <div class="chart-actions">
+                        <button class="btn-icon" title="Exporter">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn-icon" title="Plein écran">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+                <canvas id="hourlyChart"></canvas>
+            </div>
+
+            <div class="chart-card chart-card-small">
+                <div class="chart-header">
+                    <h3 class="chart-title">Distribution par Type de Capteur</h3>
+                    <div class="chart-actions">
+                        <button class="btn-icon" title="Exporter">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+                <canvas id="distributionChart"></canvas>
+            </div>
+        </div>
+
+        <div class="dashboard-secondary-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">Statistiques par Localisation</h3>
+                    <div class="chart-actions">
+                        <button class="btn-icon" title="Actualiser">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="locationTable">
+                        <thead>
+                            <tr>
+                                <th>Localisation</th>
+                                <th>Capteurs</th>
+                                <th>Messages</th>
+                                <th>Anomalies</th>
+                                <th>Batterie</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="alerts-container">
+                <div class="alerts-header">
+                    <h3 class="alerts-title">Alertes Récentes</h3>
+                    <div class="alert-badge" id="alert-count">0</div>
+                </div>
+                <div class="alerts-list" id="alerts-list">
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-footer">
+            <p>Système de monitoring IoT - Projet Big Data & Analytics | Données mises à jour en temps réel</p>
+        </div>
+    </div>
+
+    <script>
+        let hourlyChart, distributionChart;
+
+        function generateDemoData() {
+            return {
+                kpis: {
+                    total_sensors: 142,
+                    active_sensors: 138,
+                    total_messages: 28450,
+                    total_anomalies: 324,
+                    anomaly_rate: 1.14,
+                    avg_battery: 78,
+                    low_battery_sensors: 12
+                },
+                hourly: Array.from({length: 24}, (_, i) => ({
+                    hour: `${i}h`,
+                    temperature: 20 + Math.sin(i/3) * 5 + Math.random() * 2,
+                    humidity: 50 + Math.cos(i/4) * 10 + Math.random() * 3,
+                    anomalies: Math.floor(Math.random() * (i < 12 ? 15 : 25))
+                })),
+                distribution: [
+                    { type: 'Température', count: 45 },
+                    { type: 'Humidité', count: 38 },
+                    { type: 'Pression', count: 32 },
+                    { type: 'Qualité Air', count: 27 }
+                ],
+                locations: [
+                    { location: 'Salle Serveurs A', sensors: 24, messages: 5200, anomalies: 45, avg_battery: 92 },
+                    { location: 'Atelier Production', sensors: 32, messages: 6800, anomalies: 87, avg_battery: 65 },
+                    { location: 'Bureau Étude', sensors: 18, messages: 3200, anomalies: 12, avg_battery: 88 },
+                    { location: 'Entrepôt B', sensors: 28, messages: 6100, anomalies: 56, avg_battery: 72 },
+                    { location: 'Laboratoire', sensors: 22, messages: 4100, anomalies: 34, avg_battery: 85 },
+                    { location: 'Extérieur Site', sensors: 18, messages: 3050, anomalies: 90, avg_battery: 58 }
+                ],
+                alerts: [
+                    { sensor_id: 'TEMP-045', type: 'Température', severity: 'high', timestamp: '10:24:32', message: 'Température critique: 42°C détectée' },
+                    { sensor_id: 'BATT-012', type: 'Batterie', severity: 'medium', timestamp: '10:18:15', message: 'Niveau batterie faible: 12%' },
+                    { sensor_id: 'HUM-028', type: 'Humidité', severity: 'low', timestamp: '10:05:42', message: 'Humidité anormale: 85% détectée' },
+                    { sensor_id: 'PRES-033', type: 'Pression', severity: 'high', timestamp: '09:52:10', message: 'Chute de pression soudaine détectée' },
+                    { sensor_id: 'AIR-019', type: 'Qualité Air', severity: 'medium', timestamp: '09:45:23', message: 'Niveau CO2 élevé détecté' },
+                    { sensor_id: 'TEMP-067', type: 'Température', severity: 'high', timestamp: '09:32:18', message: 'Température anormale: -5°C détectée' },
+                    { sensor_id: 'HUM-041', type: 'Humidité', severity: 'medium', timestamp: '09:21:55', message: 'Humidité trop basse: 15% détectée' },
+                    { sensor_id: 'BATT-029', type: 'Batterie', severity: 'high', timestamp: '09:15:42', message: 'Batterie critique: 5% restant' },
+                    { sensor_id: 'AIR-022', type: 'Qualité Air', severity: 'low', timestamp: '09:08:37', message: 'Particules fines élevées détectées' },
+                    { sensor_id: 'PRES-051', type: 'Pression', severity: 'medium', timestamp: '09:01:24', message: 'Pression anormalement élevée: 1100 hPa' }
+                ]
+            };
+        }
+
+        async function loadKPIs() {
+            try {
+                const data = generateDemoData().kpis;
+                
+                const kpiHTML = `
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-title">Capteurs Totaux</div>
+                            <div class="kpi-icon" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);">
+                                <i class="fas fa-microchip"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value">${data.total_sensors}</div>
+                        <div class="kpi-detail">
+                            <span class="status-indicator status-active"></span>
+                            <span>${data.active_sensors} actifs</span>
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up"></i>
+                                4.2%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-title">Messages Traités</div>
+                            <div class="kpi-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value">${(data.total_messages/1000).toFixed(1)}k</div>
+                        <div class="kpi-detail">
+                            <i class="fas fa-history"></i>
+                            <span>Dernières 24h</span>
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up"></i>
+                                8.7%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-title">Anomalies Détectées</div>
+                            <div class="kpi-icon" style="background: linear-gradient(135deg, #ef4444, #f87171);">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value">${data.total_anomalies}</div>
+                        <div class="kpi-detail">
+                            <span>${data.anomaly_rate}% du total</span>
+                            <span class="trend-indicator trend-down">
+                                <i class="fas fa-arrow-down"></i>
+                                1.3%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-title">Niveau Batterie Moyen</div>
+                            <div class="kpi-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                                <i class="fas fa-battery-three-quarters"></i>
+                            </div>
+                        </div>
+                        <div class="kpi-value">${data.avg_battery}%</div>
+                        <div class="kpi-detail">
+                            <span class="status-indicator status-warning"></span>
+                            <span>${data.low_battery_sensors} capteurs faibles</span>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('kpi-grid').innerHTML = kpiHTML;
+            } catch (error) {
+                console.error('Erreur chargement KPIs:', error);
+            }
+        }
+
+        async function loadHourlyData() {
+            try {
+                const data = generateDemoData().hourly;
+                
+                const hours = data.map(d => d.hour);
+                const temperatures = data.map(d => d.temperature);
+                const humidities = data.map(d => d.humidity);
+                const anomalies = data.map(d => d.anomalies);
+                
+                if (hourlyChart) hourlyChart.destroy();
+                
+                const ctx = document.getElementById('hourlyChart').getContext('2d');
+                hourlyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hours,
+                        datasets: [
+                            {
+                                label: 'Température (°C)',
+                                data: temperatures,
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Humidité (%)',
+                                data: humidities,
+                                borderColor: '#0ea5e9',
+                                backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Anomalies',
+                                data: anomalies,
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: true,
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                grid: {
+                                    display: true,
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Température / Humidité'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                grid: {
+                                    drawOnChartArea: false
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Anomalies'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur chargement données horaires:', error);
+            }
+        }
+
+        async function loadDistribution() {
+            try {
+                const data = generateDemoData().distribution;
+                
+                const types = data.map(d => d.type);
+                const counts = data.map(d => d.count);
+                
+                if (distributionChart) distributionChart.destroy();
+                
+                const ctx = document.getElementById('distributionChart').getContext('2d');
+                distributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: types,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: [
+                                '#ef4444',
+                                '#0ea5e9',
+                                '#10b981',
+                                '#f59e0b'
+                            ],
+                            borderWidth: 0,
+                            hoverOffset: 15
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur chargement distribution:', error);
+            }
+        }
+
+        async function loadLocations() {
+            try {
+                const data = generateDemoData().locations;
+                
+                const tbody = document.querySelector('#locationTable tbody');
+                tbody.innerHTML = data.map(loc => {
+                    let batteryClass = 'battery-high';
+                    if (loc.avg_battery < 50) batteryClass = 'battery-low';
+                    else if (loc.avg_battery < 75) batteryClass = 'battery-medium';
+                    
+                    return `
+                        <tr>
+                            <td><span class="status-indicator status-active"></span>${loc.location}</td>
+                            <td>${loc.sensors}</td>
+                            <td>${loc.messages.toLocaleString()}</td>
+                            <td><span class="status-indicator ${loc.anomalies > 50 ? 'status-error' : 'status-warning'}"></span>${loc.anomalies}</td>
+                            <td><span class="battery-indicator ${batteryClass}"><i class="fas fa-battery-${loc.avg_battery > 75 ? 'three-quarters' : loc.avg_battery > 50 ? 'half' : 'quarter'}"></i>${loc.avg_battery}%</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Erreur chargement localisations:', error);
+            }
+        }
+
+        async function loadAlerts() {
+            try {
+                const data = generateDemoData().alerts;
+                
+                const alertsHTML = data.map(alert => `
+                    <div class="alert-item ${alert.severity === 'high' ? '' : alert.severity === 'medium' ? 'medium' : 'low'}">
+                        <div class="alert-header">
+                            <span class="alert-sensor">${alert.sensor_id} - ${alert.type}</span>
+                            <span class="alert-time">${alert.timestamp}</span>
+                        </div>
+                        <div class="alert-message">${alert.message}</div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('alerts-list').innerHTML = alertsHTML;
+                document.getElementById('alert-count').textContent = data.length;
+            } catch (error) {
+                console.error('Erreur chargement alertes:', error);
+            }
+        }
+
+        async function updateDashboard() {
+            await Promise.all([
+                loadKPIs(),
+                loadHourlyData(),
+                loadDistribution(),
+                loadLocations(),
+                loadAlerts()
+            ]);
+            
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString('fr-FR');
+        }
+
+        updateDashboard();
+
+        setInterval(updateDashboard, 10000);
+
+        document.querySelectorAll('.btn-icon').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const icon = this.querySelector('i');
+                const originalClass = icon.className;
+                
+                icon.className = 'fas fa-check';
+                setTimeout(() => {
+                    icon.className = originalClass;
+                }, 1000);
+            });
+        });
+    </script>
+</body>
+</html>
